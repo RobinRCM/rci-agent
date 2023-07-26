@@ -83,10 +83,10 @@ class MiniWoBEnv(MiniWoBEnvironment, gym.Env):
             0,
             255,
             (self.obs_im_width, self.obs_im_height, self.num_channels),
-            dtype=int,
+            dtype=np.uint8,
         )
         self.action_space = gym.spaces.Box(
-            low=np.array([0, 0, 0]), high=np.array([2, 159, 159]), shape=(3,), dtype=int
+            low=np.array([0, 0, 0]), high=np.array([2, 159, 159]), shape=(3,), dtype=np.uint8
         )
 
     def reset(

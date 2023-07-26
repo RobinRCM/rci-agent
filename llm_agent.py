@@ -158,48 +158,49 @@ class LLMAgent:
 
         return pt, plan
 
-    def rci_action(self, instruciton: str, pt=None):
-        instruciton = self.process_instruction(instruciton)
+    def rci_action(self, instruction: str, pt=None):
+        instruction = self.process_instruction(instruction)
 
         loop_num = 0
-        while self.check_regex(instruciton):
+        print(f"\nLOOP NUM: {loop_num}\n")
+        while self.check_regex(instruction):
             if loop_num >= self.rci_limit:
-                print(instruciton)
+                print(instruction)
                 self.save(pt)
                 raise ValueError("Action RCI failed")
 
             pt += self.prompt.rci_action_prompt
-            instruciton = self.get_response(pt)
+            instruction = self.get_response(pt)
 
-            pt += instruciton
-            instruciton = self.process_instruction(instruciton)
+            pt += instruction
+            instruction = self.process_instruction(instruction)
 
             loop_num += 1
 
-        return pt, instruciton
+        return pt, instruction
 
-    def check_regex(self, instruciton):
+    def check_regex(self, instruction):
         return (
-            (not re.search(self.prompt.clickxpath_regex, instruciton, flags=re.I))
-            and (not re.search(self.prompt.chatgpt_type_regex, instruciton, flags=re.I))
-            and (not re.search(self.prompt.davinci_type_regex, instruciton, flags=re.I))
-            and (not re.search(self.prompt.press_regex, instruciton, flags=re.I))
-            and (not re.search(self.prompt.clickoption_regex, instruciton, flags=re.I))
-            and (not re.search(self.prompt.movemouse_regex, instruciton, flags=re.I))
+            (not re.search(self.prompt.clickxpath_regex, instruction, flags=re.I))
+            and (not re.search(self.prompt.chatgpt_type_regex, instruction, flags=re.I))
+            and (not re.search(self.prompt.davinci_type_regex, instruction, flags=re.I))
+            and (not re.search(self.prompt.press_regex, instruction, flags=re.I))
+            and (not re.search(self.prompt.clickoption_regex, instruction, flags=re.I))
+            and (not re.search(self.prompt.movemouse_regex, instruction, flags=re.I))
         )
 
-    def process_instruction(self, instruciton: str):
-        end_idx = instruciton.find("`")
+    def process_instruction(self, instruction: str):
+        end_idx = instruction.find("`")
         if end_idx != -1:
-            instruciton = instruciton[:end_idx]
+            instruction = instruction[:end_idx]
 
-        instruciton = instruciton.replace("`", "")
-        instruciton = instruciton.replace("\n", "")
-        instruciton = instruciton.replace("\\n", "\n")
-        instruciton = instruciton.strip()
-        instruciton = instruciton.strip("'")
+        instruction = instruction.replace("`", "")
+        instruction = instruction.replace("\n", "")
+        instruction = instruction.replace("\\n", "\n")
+        instruction = instruction.strip()
+        instruction = instruction.strip("'")
 
-        return instruciton
+        return instruction
 
     def get_plan_step(self):
         idx = 1
@@ -209,6 +210,7 @@ class LLMAgent:
             idx += 1
 
     def initialize_plan(self):
+        print(f"****************************\nTASK: {self.task}\n")
         if not self.custom_gaol:
             if self.with_task:
                 self.initialize_task()
@@ -229,6 +231,15 @@ class LLMAgent:
             pt += message
 
         self.current_plan = message
+
+        log_plan_message = True
+        if log_plan_message:
+            print(f"\n************************\nINITIALIZE PLAN\n")
+            print(f"\nPLAN MESSAGE:\n{message}\n\n")
+            print(f"\nPT:\n{pt}\n")
+            print("***********************************\n\n")
+
+
         self.save(pt)
 
         return
@@ -327,11 +338,18 @@ class LLMAgent:
 
         pt, message = self.update_action(pt, message)
 
-        pt, instruction = self.rci_action(pt=pt, instruciton=message)
+        pt, instruction = self.rci_action(pt=pt, instruction=message)
 
         self.past_instruction.append(instruction)
 
         self.save(pt)
+
+        log_action_generation = True
+        if log_action_generation:
+            print(f"\n\n********************\nGENERATE ACTION:\n")
+            print(f"PT:\n{pt}\n")
+            print(f"\nINSTRUCTION:\n{instruction}\n")
+            print("*******************************")
 
         return instruction
 

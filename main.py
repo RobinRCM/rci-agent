@@ -5,6 +5,9 @@ import computergym
 import gym
 from llm_agent import LLMAgent
 
+import time
+import re
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
@@ -12,7 +15,6 @@ from selenium.webdriver.common.action_chains import ActionChains
 import logging
 
 logging.basicConfig(level=logging.INFO)
-
 
 def parse_opt():
     parser = argparse.ArgumentParser()
@@ -23,12 +25,11 @@ def parse_opt():
     parser.add_argument("--step", type=int, default=-1)
     parser.add_argument("--irci", type=int, default=1)
     parser.add_argument("--sgrounding", action="store_true", default=False)
-    parser.add_argument("--headless", action="store_true", default=True)
+    parser.add_argument("--headless", action="store_true", default=False)
 
     opt = parser.parse_args()
 
     return opt
-
 
 def web(opt, url):
     driver = get_webdriver(url)
@@ -62,7 +63,6 @@ def web(opt, url):
             llm_agent.update_html_state(html_body)
 
     driver.quit()
-
 
 def get_html_state_from_real(driver, opt):
     if opt.env == "facebook":
@@ -160,11 +160,40 @@ def miniwob(opt):
             assert len(states) == 1
             try:
                 instruction = llm_agent.generate_action()
+
+
+                def correct_output(output_string):
+                    # regex pattern to find ^, \s, and $ in the string
+                    pattern = r'\\s|\^|\$'
+                    
+                    # Replace these with the correct characters or remove them
+                    corrected_string = re.sub(pattern, lambda x: ' ' if x.group() == '\\s' else '', output_string)
+                    
+                    return corrected_string
+                
+                if "clickxpath" in instruction and ("^" in instruction or "\s" in instruction or "$" in instruction):
+                    print("INSTRUCTION IS BEING CORRECTED:")
+                    print(f"ORIGINAL INSTRUCTION:\n{instruction}\n")
+                    instruction = correct_output(instruction)
+                    print(f"CORRECTED INSTRUCTION:\n{instruction}\n")
+
+                # check if the instruction follows the pattern
+
+                print(f"\nABOUT TO GENERATE ACTION CORRESPONDING TO:\n{instruction}\n")
                 logging.info(f"The executed instruction: {instruction}")
+
+                ## TODO: use OpenAI to constraint the output instruction so that it follows the right format
+                ## and doesn't spit out something in natural language.
 
                 miniwob_action = llm_agent.convert_to_miniwob_action(instruction)
 
-                states, rewards, dones, _ = env.step([miniwob_action])
+                states, rewards, dones, truncated = env.step([miniwob_action])
+
+                print(f"\nSTATES: {states}\n")
+                print(f"\nREWARDS: {rewards}\n")
+                print(f"\nDONES: {dones}\n")
+                print(f"\nTRUNCATED: {truncated}\n")
+            
             except ValueError:
                 print("Invalid action or rci action fail")
                 rewards = [0]
@@ -183,8 +212,11 @@ def miniwob(opt):
         if rewards[0] > 0:
             success += 1
             llm_agent.save_result(True)
+            print("\nSUCCESS\n")
         else:
             llm_agent.save_result(False)
+            print("\nFAILURE\n")
+            time.sleep(5)
 
         print(f"success rate: {success / opt.num_episodes}")
 

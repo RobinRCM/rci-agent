@@ -9,7 +9,22 @@ class Prompt:
         self.press_regex = (
             "^press\s(enter|arrowleft|arrowright|arrowup|arrowdown|backspace)$"
         )
-        self.clickxpath_regex = "^clickxpath\s.{1,}$"
+
+
+
+
+        # We expect an output of the form "clickxpath //..."
+        # e.g. clickxpath //select[@id="options"]
+
+        # Let's break this down:
+        # ^clickxpath\s : This matches any line that starts with the exact string "clickxpath" followed by a whitespace.
+        # // : This matches the exact string "//".
+        # \S+ : This matches one or more non-whitespace characters. The "\S" is a special character in regex that matches any non-whitespace character, and "+" means one or more times.
+        # $ : This asserts the end of a line. This ensures the regex matches only to the end of the line.
+        # So in summary, this regex will match any string that starts with "clickxpath", followed by a space, then "//", and then one or more non-whitespace characters, and has nothing else after that sequence. Here's an example of a string that would match this pattern: "clickxpath //some_xpath_here".
+
+        self.clickxpath_regex = r'^clickxpath\s//\S+$'
+        #"^clickxpath\s.{1,}$"
         self.clickoption_regex = "^clickoption\s.{1,}$"
         self.movemouse_regex = "^movemouse\s.{1,}$"
 

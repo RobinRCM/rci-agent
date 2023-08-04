@@ -138,7 +138,8 @@ def miniwob(opt):
             state_grounding=opt.sgrounding,
         )
         # initialize environment
-        states = env.reset(seeds=[random.random()], record_screenshots=True)
+        # states = env.reset(seeds=[random.random()], record_screenshots=True)
+        states = env.reset(seeds=[42], record_screenshots=True)
         llm_agent.set_goal(states[0].utterance)
         html_state = get_html_state(opt, states)
 
@@ -183,8 +184,10 @@ def miniwob(opt):
         if rewards[0] > 0:
             success += 1
             llm_agent.save_result(True)
+            print("SUCCESS\n")
         else:
             llm_agent.save_result(False)
+            print("FAILURE\n")
 
         print(f"success rate: {success / opt.num_episodes}")
 

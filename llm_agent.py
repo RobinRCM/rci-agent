@@ -149,11 +149,13 @@ class LLMAgent:
 
     def rci_plan(self, pt=None):
         pt += "\n\nFind problems with this plan for the given task compared to the example plans.\n\n"
-        criticizm = self.get_response(pt)
-        pt += criticizm
+        # criticism = self.get_response_with_custom_model(pt, "gpt-4")
+        criticism = self.get_response(pt)
+        pt += criticism
 
         pt += "\n\nBased on this, what is the plan for the agent to complete the task?\n\n"
         # pt += self.webpage_state_prompt()
+        # plan = self.get_response_with_custom_model(pt, "gpt-4")
         plan = self.get_response(pt)
 
         return pt, plan
@@ -220,18 +222,171 @@ class LLMAgent:
         pt += self.webpage_state_prompt(True, with_task=self.with_task)
         pt += self.prompt.init_plan_prompt
 
+        # try out with gpt4
+        # message = "\n" + self.get_response_with_custom_model(pt, "gpt-4")
         message = "\n" + self.get_response(pt)
+
+        logging.info(f"\nHERE IS THE INITIAL PLAN:\n{message}\n")
 
         pt += message
 
         for _ in range(self.rci_plan_loop):
             pt, message = self.rci_plan(pt)
+            logging.info(f"REVISED PLAN:\n{message}\n")
             pt += message
 
         self.current_plan = message
         self.save(pt)
 
         return
+
+    def get_instruction(self, pt):
+        import inspect
+
+        logging.info(
+            f"Send a request to the language model from {inspect.stack()[1].function}"
+        )
+
+        while True:
+            try:
+                if self.llm == "chatgpt" or self.llm == "gpt4":
+                    print("GETTING THE INSTRUCTION FUNCTION\n")
+                    time.sleep(1)
+                    response = openai.ChatCompletion.create(
+                        model=self.model,
+                        temperature=0,
+                        top_p=1,
+                        frequency_penalty=0.0,
+                        presence_penalty=0.0,
+                        max_tokens=256,
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are an autoregressive language model that completes user's sentences. You should not conversate with user.",
+                            },
+                            {"role": "user", "content": pt},
+                        ],
+                        functions= [
+                            {
+                            "name": "selenium_action",
+                            "description": "Determine next Selenium action",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "action": {
+                                        "type": "string",
+                                        "enum": ["clickxpath", "type"],
+                                        "description": "The Selenium action to run. Can be: `clickxpath` to click on an HTML element, or `type` to input text."
+                                    },
+                                    "action_input": {
+                                        "type": "string",
+                                    "description": "The Selenium action argument. If the action is clickxpath, the action_input has to be the XPath of the considered HTML element to click on, for instance `//select[@id=\"options\"]`. If the action is type, the action_input is simply the text to be written, such as \"George\". \
+                                    Therefore, the output would be `type George` if the text \"George\" has to be input.\n If the action to perform is to click on the button having the class \
+                                    'secondary-action', the output would be: `clickxpath //button[@class='secondary-action']`.\n\
+                                    If we want to click on the drop-down menu that has 'options' for ID., the output would be: `clickxpath //select[@id='options']`\n\
+                                    If we want to click on the element in the drop-down menu that has Audrye as text: `clickxpath //select[@id='options']/option[text()='Audrye']`"
+                                    },
+                                    "action_regex": {
+                                        "type": "string",
+                                        "enum": ['^clickxpath\\\\s//\\\\S+$', '^type\\\\s[^\\"]{1,}$'],
+                                        "description": "The concatenation of the selected action and action_input must follow the corresponding regex."
+                                    }
+
+                                },
+                                "required": ["action", "action_input", "action_regex"]
+                            }
+                            }
+                        ],
+                        function_call = {"name": "selenium_action"}
+                    )
+
+
+
+                    # print(f"CURRENT RESPONSE:\n{response}\n")
+                    print(f"RESPONSE:{response}\n")
+                    message = response["choices"][0]["message"]["function_call"]["arguments"] #response["choices"][0]["message"]["content"]
+                    message = json.loads(message)
+                    print(f"CURRENT MESSAGE:\n{message}\n")
+
+                    message = message["action"] + " " + message["action_input"]
+                    print(f"CURRENT MESSAGE:\n{message}\n")
+                    # print(f"CURRENT RESPONSE:\n {response}\n")
+                else:
+                    time.sleep(1)
+                    response = openai.Completion.create(
+                        model=self.model,
+                        prompt=pt,
+                        temperature=0,
+                        max_tokens=256,
+                        top_p=1,
+                        frequency_penalty=0.0,
+                        presence_penalty=0.0,
+                    )
+                    message = response["choices"][0]["text"]
+            except Exception as e:
+                print(e)
+                if "maximum context" in str(e):
+                    raise ValueError
+                time.sleep(10)
+            else:
+                if message:
+                    break
+
+        return message
+
+
+    # we want to be able to use different LLM versions for the various parts of the task: e.g. gpt4 for the plan and 3.5 for the rest.
+    def get_response_with_custom_model(self, pt, model):
+        import inspect
+
+        logging.info(
+            f"Send a request to the language model from {inspect.stack()[1].function}"
+        )
+
+        while True:
+            try:
+                if self.llm == "chatgpt" or self.llm == "gpt4":
+                    time.sleep(1)
+                    response = openai.ChatCompletion.create(
+                        model=model,
+                        temperature=0,
+                        top_p=1,
+                        frequency_penalty=0.0,
+                        presence_penalty=0.0,
+                        max_tokens=256,
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are an autoregressive language model that completes user's sentences. You should not conversate with user.",
+                            },
+                            {"role": "user", "content": pt},
+                        ],
+                    )
+
+                    message = response["choices"][0]["message"]["content"]
+                else:
+                    time.sleep(1)
+                    response = openai.Completion.create(
+                        model=model,
+                        prompt=pt,
+                        temperature=0,
+                        max_tokens=256,
+                        top_p=1,
+                        frequency_penalty=0.0,
+                        presence_penalty=0.0,
+                    )
+                    message = response["choices"][0]["text"]
+            except Exception as e:
+                print(e)
+                if "maximum context" in str(e):
+                    raise ValueError
+                time.sleep(10)
+            else:
+                if message:
+                    break
+
+        return message
+
 
     def get_response(self, pt):
         import inspect
@@ -261,6 +416,8 @@ class LLMAgent:
                     )
 
                     message = response["choices"][0]["message"]["content"]
+                # elif llm == "llama2":
+                    # pass
                 else:
                     time.sleep(1)
                     response = openai.Completion.create(
@@ -321,7 +478,11 @@ class LLMAgent:
 
         pt += action_prompt
 
-        message = self.get_response(pt)
+        logging.info(f"GETTING THE INSTRUCTION\nPROMPT: {pt}\n")
+
+        message = self.get_instruction(pt) # self.get_response(pt)
+        # message = self.get_response(pt)
+        logging.info(f"THE GENERATED INSTRUCTION:\n{message}")
 
         pt += self.process_instruction(message) + "`."
 

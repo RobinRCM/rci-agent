@@ -4,12 +4,13 @@ import os
 class Prompt:
     def __init__(self, env: str = "click-button") -> None:
         self.llm = "davinci"
-        self.davinci_type_regex = "^type\s.{1,}$"
+        self.davinci_type_regex = '^type\s[^"]{1,}$' #"^type\s.{1,}$"
         self.chatgpt_type_regex = '^type\s[^"]{1,}$'
         self.press_regex = (
             "^press\s(enter|arrowleft|arrowright|arrowup|arrowdown|backspace)$"
         )
-        self.clickxpath_regex = "^clickxpath\s.{1,}$"
+        self.clickxpath_regex = r'^clickxpath\s//\S+$'
+        #"^clickxpath\s.{1,}$"
         self.clickoption_regex = "^clickoption\s.{1,}$"
         self.movemouse_regex = "^movemouse\s.{1,}$"
 

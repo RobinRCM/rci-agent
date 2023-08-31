@@ -25,7 +25,7 @@ def parse_opt():
     parser.add_argument("--step", type=int, default=-1)
     parser.add_argument("--irci", type=int, default=1)
     parser.add_argument("--sgrounding", action="store_true", default=False)
-    parser.add_argument("--headless", action="store_true", default=False)
+    parser.add_argument("--headless", action="store_true", default=True)
 
     opt = parser.parse_args()
 
@@ -111,7 +111,7 @@ def perform_instruction(driver, instruction):
 
 def get_webdriver(url):
     options = webdriver.ChromeOptions()
-    # options.add_argument("headless")
+    options.add_argument("headless")
     options.add_argument("disable-gpu")
     options.add_argument("no-sandbox")
 

@@ -25,7 +25,7 @@ def parse_opt():
     parser.add_argument("--step", type=int, default=-1)
     parser.add_argument("--irci", type=int, default=1)
     parser.add_argument("--sgrounding", action="store_true", default=False)
-    parser.add_argument("--headless", action="store_true", default=True)
+    parser.add_argument("--headless", action="store_true", default=False)
 
     opt = parser.parse_args()
 
@@ -107,7 +107,6 @@ def perform_instruction(driver, instruction):
             raise NotImplemented
     else:
         raise ValueError("Invalid instruction")
-
 
 def get_webdriver(url):
     options = webdriver.ChromeOptions()

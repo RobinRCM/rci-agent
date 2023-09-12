@@ -16,7 +16,6 @@ from computergym.miniwob.miniwob_interface.action import (
 )
 import re
 
-
 class LLMAgent:
     def __init__(
         self,
@@ -223,6 +222,10 @@ class LLMAgent:
         pt += self.prompt.init_plan_prompt
 
         message = "\n" + self.get_response(pt)
+        print("\n\n")
+        print(f"INITIAL PLAN:\n {message}\n")
+        print(f"CORRESPONDING INPUT PROMPT:\n{pt}\n")
+        print(f"END OF INPUT PROMPT\n")
 
         pt += message
 
